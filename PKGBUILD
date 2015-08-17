@@ -1,0 +1,55 @@
+# Maintainer: DonOregano <lars@foldspace.nu>
+
+pkgname=safir_sdk_core-git
+pkgver=logan_r2404.43465d2
+pkgrel=1
+pkgdesc="Safir SDK Core is a middleware and platform for creation of distributed soft real-time systems. It is Scalable, Reliable, Portable, and last but not least, it is Open!"
+arch=('i686' 'x86_64' 'armv6h' 'armv7h')
+url="http://www.safirsdkcore.com"
+license=('GPL3')
+groups=()
+depends=('boost' 'unixodbc' 'qt5-base' 'cmake' 'python' 'mono' 'java-environment>=6' 'google-breakpad-svn')
+makedepends=('git' 'subversion' 'doxygen' 'graphviz')
+install=
+source=("$pkgname"::'git+https://github.com/SafirSDK/safir_sdk_core.git#branch=logan')
+sha1sums=('SKIP')
+backup=('etc/safir_sdk_core/typesystem.ini' 'etc/safir_sdk_core/logging.ini' 'etc/safir_sdk_core/locations.ini')
+
+pkgver() {
+  cd "$srcdir/$pkgname"
+  printf "logan_r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd "$srcdir/$pkgname"
+  cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=RelWithDebInfo .
+
+  make
+}
+
+check() {
+  cd "$srcdir/$pkgname"
+
+  make test
+}
+
+package() {
+  cd "$srcdir/$pkgname"
+
+  make DESTDIR="$pkgdir/" install
+
+  #Create directories
+  install -d -m 777 $pkgdir/var/run/safir_sdk_core
+  install -d -m 777 $pkgdir/var/log/safir_sdk_core
+
+  # install assemblies into Mono's GAC
+  for file in $pkgdir/usr/lib/safir_sdk_core/*.dll
+  do
+    gacutil -i $file -root "$pkgdir/usr/lib"
+  done
+
+  #install configuration in /etc/safir_sdk_core
+  install -d -m 755 $pkgdir/etc/safir_sdk_core
+  install -m 644 -t $pkgdir/etc/safir_sdk_core $pkgdir/usr/share/doc/safir_sdk_core/example_configuration/*.ini
+}
+
